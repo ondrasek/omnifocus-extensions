@@ -1,0 +1,56 @@
+/*{
+	"author": "Rosemary Orchard",
+	"targets": ["omnifocus"],
+	"type": "action",
+	"identifier": "com.rosemaryorchard.omnifocus.complete-and-await-reply",
+	"version": "1.0",
+	"description": "Mark the currently selected task as complete and add a new task to await the reply. Modified by Ondrej Krajicek.",
+	"label": "Follow Up",
+	"mediumLabel": "Follow Up",
+	"paletteLabel": "Follow Up",
+}*/
+
+(() => {
+	let action = new PlugIn.Action(function(selection) {
+		let duplicatedTasks = new Array()
+		selection.tasks.forEach(function(task) {
+			let originalTask = task;
+
+			insertionLocation = task.after;
+			if(insertionLocation === null) {
+				insertionLocation = inbox.ending
+				}
+				
+			let newTask = duplicateTasks([ originalTask ], insertionLocation)[0];
+			duplicatedTasks.push(newTask.id.primaryKey);
+
+			if (!originalTask.name.toLowerCase().startsWith("follow up:"))
+				newTask.name = "Follow Up: " + originalTask.name;
+			
+			// Copy and update the task note.
+			originalTaskURLStr = "omnifocus:///task/" + originalTask.id.primaryKey;
+			let now = new Date();
+			let parentName = originalTask.parent === null ? "Inbox" : originalTask.parent.name;
+			strToAdd = now.toISOString() + 
+				"Created from Task: " + originalTask.name + "\n" +  
+				"URI: " + originalTaskURLStr + "\n" + 
+				"Project: " + parentName + "\n\n";
+			
+			newNoteText = new Text(strToAdd, newTask.noteText.style);
+			newNoteText.append(originalTask.noteText);
+			newTask.noteText = newNoteText;
+
+			originalTask.markComplete();
+		});
+		
+		idStr = duplicatedTasks.join(",")
+		URL.fromString("omnifocus:///task/" + idStr).open()
+    });
+
+    
+	action.validate = function(selection){
+		return (selection.tasks.length >= 1)
+	};
+        
+	return action;
+})();
